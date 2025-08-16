@@ -40,6 +40,7 @@
 #include <vector>
 
 #include <rclcpp/rclcpp.hpp>
+#include <rcl_interfaces/msg/parameter_descriptor.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 
 #include <ublox_msgs/msg/aid_alm.hpp>
@@ -344,8 +345,8 @@ void UbloxNode::getRosParams() {
   uart_out_ = declareRosIntParameter<uint16_t>(this, "uart1.out", ublox_msgs::msg::CfgPRT::PROTO_UBX);
   // USB params
   set_usb_ = false;
-  this->declare_parameter("usb.in");
-  this->declare_parameter("usb.out");
+  this->declare_parameter<uint16_t>("usb.in", rcl_interfaces::msg::ParameterDescriptor(), false);
+  this->declare_parameter<uint16_t>("usb.out", rcl_interfaces::msg::ParameterDescriptor(), false);
   usb_tx_ = declareRosIntParameter<uint16_t>(this, "usb.tx_ready", 0);
   if (isRosParameterSet(this, "usb.in") || isRosParameterSet(this, "usb.out")) {
     set_usb_ = true;
@@ -365,8 +366,8 @@ void UbloxNode::getRosParams() {
   nav_rate_ = declareRosIntParameter<uint16_t>(this, "nav_rate", 1);  // # of measurement rate cycles
 
   // RTCM params
-  this->declare_parameter("rtcm.ids");
-  this->declare_parameter("rtcm.rates");
+  this->declare_parameter<std::vector<int64_t>>("rtcm.ids", rcl_interfaces::msg::ParameterDescriptor(), false);
+  this->declare_parameter<std::vector<int64_t>>("rtcm.rates", rcl_interfaces::msg::ParameterDescriptor(), false);
  
   this->get_parameter("rtcm.ids", rtcm_ids);
   this->get_parameter("rtcm.rates", rtcm_rates);
@@ -426,11 +427,11 @@ void UbloxNode::getRosParams() {
 
 
   this->declare_parameter("dat.set", false);
-  this->declare_parameter("dat.majA");
-  this->declare_parameter("dat.flat");
-  this->declare_parameter("dat.shift");
-  this->declare_parameter("dat.rot");
-  this->declare_parameter("dat.scale");
+  this->declare_parameter<double>("dat.majA", rcl_interfaces::msg::ParameterDescriptor(), false);
+  this->declare_parameter<double>("dat.flat", rcl_interfaces::msg::ParameterDescriptor(), false);
+  this->declare_parameter<std::vector<double>>("dat.shift", rcl_interfaces::msg::ParameterDescriptor(), false);
+  this->declare_parameter<std::vector<double>>("dat.rot", rcl_interfaces::msg::ParameterDescriptor(), false);
+  this->declare_parameter<double>("dat.scale", rcl_interfaces::msg::ParameterDescriptor(), false);
   if (getRosBoolean(this, "dat.set")) {
     std::vector<double> shift, rot;
     if (!this->get_parameter("dat.majA", cfg_dat_.maj_a)
@@ -475,7 +476,7 @@ void UbloxNode::getRosParams() {
   this->declare_parameter("sv_in.min_dur", 0);
   this->declare_parameter("sv_in.acc_lim", 0.0);
 
-  this->declare_parameter("dgnss_mode");
+  this->declare_parameter<int64_t>("dgnss_mode", rcl_interfaces::msg::ParameterDescriptor(), false);
 
   // raw data stream logging
   this->declare_parameter("raw_data_stream.enable", false);
@@ -557,9 +558,9 @@ void UbloxNode::getRosParams() {
   // HNR parameters
   this->declare_parameter("publish.hnr.pvt", true);
 
-  this->declare_parameter("tmode3");
-  this->declare_parameter("arp.position");
-  this->declare_parameter("arp.position_hp");
+  this->declare_parameter<std::string>("tmode3", rcl_interfaces::msg::ParameterDescriptor(), false);
+  this->declare_parameter<std::vector<double>>("arp.position", rcl_interfaces::msg::ParameterDescriptor(), false);
+  this->declare_parameter<std::vector<int64_t>>("arp.position_hp", rcl_interfaces::msg::ParameterDescriptor(), false);
   this->declare_parameter("arp.acc", 0.0);
   this->declare_parameter("arp.lla_flag", false);
 

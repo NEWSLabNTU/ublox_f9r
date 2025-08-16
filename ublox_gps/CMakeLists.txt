@@ -13,7 +13,6 @@ endif()
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 find_package(ament_cmake_ros REQUIRED)
-find_package(asio REQUIRED)
 find_package(diagnostic_msgs REQUIRED)
 find_package(diagnostic_updater REQUIRED)
 find_package(geometry_msgs REQUIRED)
@@ -41,9 +40,13 @@ add_library(ublox_gps
   src/ublox_firmware.cpp
   src/ublox_firmware8.cpp
   src/ublox_firmware9.cpp)
+
+# Ensure overlay ublox_msgs headers are preferred over underlay
+target_include_directories(ublox_gps BEFORE PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/../ublox_msgs/include
+)
 ament_target_dependencies(ublox_gps
-  "asio"
-  "diagnostic_msgs"
+    "diagnostic_msgs"
   "diagnostic_updater"
   "geometry_msgs"
   "rcl_interfaces"

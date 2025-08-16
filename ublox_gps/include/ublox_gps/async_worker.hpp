@@ -37,16 +37,11 @@
 #include <thread>
 #include <vector>
 
-#include <asio/buffer.hpp>
-#include <asio/error_code.hpp>
-#include <asio/io_service.hpp>
-#include <asio/placeholders.hpp>
-#include <asio/write.hpp>
-#include <asio/ip/udp.hpp>
 
 #include <rclcpp/rclcpp.hpp>
 
 #include "worker.hpp"
+#include <boost/asio.hpp>
 
 namespace ublox_gps {
 
@@ -63,7 +58,7 @@ class AsyncWorker final : public Worker {
    * @param buffer_size the size of the input and output buffers
    */
   explicit AsyncWorker(std::shared_ptr<StreamT> stream,
-                       std::shared_ptr<asio::io_service> io_service,
+                       std::shared_ptr<boost::asio::io_service> io_service,
                        std::size_t buffer_size,
                        int debug,
                        const rclcpp::Logger& logger);
@@ -111,7 +106,7 @@ class AsyncWorker final : public Worker {
    * @param error_code an error code for read failures
    * @param bytes_received the number of bytes received
    */
-  void readEnd(const asio::error_code& error, std::size_t bytes_transferred);
+  void readEnd(const boost::system::error_code& error, std::size_t bytes_transferred);
 
   /**
    * @brief Send all the data in the output buffer.
@@ -124,7 +119,7 @@ class AsyncWorker final : public Worker {
   void doClose();
 
   std::shared_ptr<StreamT> stream_; //!< The I/O stream
-  std::shared_ptr<asio::io_service> io_service_; //!< The I/O service
+  std::shared_ptr<boost::asio::io_service> io_service_; //!< The I/O service
 
   std::mutex read_mutex_; //!< Lock for the input buffer
   std::condition_variable read_condition_;
@@ -150,7 +145,7 @@ class AsyncWorker final : public Worker {
 
 template <typename StreamT>
 AsyncWorker<StreamT>::AsyncWorker(std::shared_ptr<StreamT> stream,
-        std::shared_ptr<asio::io_service> io_service,
+        std::shared_ptr<boost::asio::io_service> io_service,
         std::size_t buffer_size,
         int debug,
         const rclcpp::Logger& logger)
@@ -197,7 +192,7 @@ void AsyncWorker<StreamT>::doWrite() {
     return;
   }
   // Write all the data in the out buffer
-  asio::write(*stream_, asio::buffer(out_.data(), out_.size()));
+  boost::asio::write(*stream_, boost::asio::buffer(out_.data(), out_.size()));
 
   if (debug_ >= 2) {
     // Print the data that was sent
@@ -213,14 +208,14 @@ void AsyncWorker<StreamT>::doWrite() {
   write_condition_.notify_all();
 }
 template <>
-inline void AsyncWorker<asio::ip::udp::socket>::doWrite() {
+inline void AsyncWorker<boost::asio::ip::udp::socket>::doWrite() {
   std::lock_guard<std::mutex> lock(write_mutex_);
   // Do nothing if out buffer is empty
   if (out_.size() == 0) {
     return;
   }
   // Write all the data in the out buffer
-  stream_->send(asio::buffer(out_.data(), out_.size()));
+  stream_->send(boost::asio::buffer(out_.data(), out_.size()));
 
   if (debug_ >= 2) {
     // Print the data that was sent
@@ -250,13 +245,13 @@ void AsyncWorker<StreamT>::doRead() {
   }
 
   stream_->async_read_some(
-      asio::buffer(in_.data() + in_buffer_size_,
+      boost::asio::buffer(in_.data() + in_buffer_size_,
                    in_.size() - in_buffer_size_),
       std::bind(&AsyncWorker<StreamT>::readEnd, this,
                 std::placeholders::_1, std::placeholders::_2));
 }
 template <>
-inline void AsyncWorker<asio::ip::udp::socket>::doRead() {
+inline void AsyncWorker<boost::asio::ip::udp::socket>::doRead() {
   std::lock_guard<std::mutex> lock(read_mutex_);
   if (in_.size() - in_buffer_size_ == 0) {
     // In some circumstances, it is possible that there is no room left in the
@@ -269,14 +264,14 @@ inline void AsyncWorker<asio::ip::udp::socket>::doRead() {
   }
 
   stream_->async_receive(
-      asio::buffer(in_.data() + in_buffer_size_,
+      boost::asio::buffer(in_.data() + in_buffer_size_,
                    in_.size() - in_buffer_size_),
-      std::bind(&AsyncWorker<asio::ip::udp::socket>::readEnd, this,
+      std::bind(&AsyncWorker<boost::asio::ip::udp::socket>::readEnd, this,
                 std::placeholders::_1, std::placeholders::_2));
 }
 
 template <typename StreamT>
-void AsyncWorker<StreamT>::readEnd(const asio::error_code& error,
+void AsyncWorker<StreamT>::readEnd(const boost::system::error_code& error,
                                    std::size_t bytes_transferred) {
   std::lock_guard<std::mutex> lock(read_mutex_);
   if (error) {
@@ -322,7 +317,7 @@ template <typename StreamT>
 void AsyncWorker<StreamT>::doClose() {
   std::lock_guard<std::mutex> lock(read_mutex_);
   stopping_ = true;
-  asio::error_code error;
+  boost::system::error_code error;
   stream_->close(error);
   if (error) {
     RCLCPP_ERROR(logger_, "Error while closing the AsyncWorker stream: %s",
